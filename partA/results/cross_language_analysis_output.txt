@@ -1,0 +1,55 @@
+Loaded 30 aligned parallel sentences x 4 languages
+
+==============================================================================
+TOKENIZER: general
+==============================================================================
+lang    tokens |   tok/word  tok/grapheme   tok/byte  tok/sentence
+------------------------------------------------------------------
+eng        284 |      1.127         0.205      0.205         9.467
+hin        815 |      2.921         0.938      0.243        27.167
+kan       3968 |     20.775         4.253      1.000       132.267
+tam       4557 |     23.734         4.361      1.000       151.900
+
+==============================================================================
+TOKENIZER: indic_aware
+==============================================================================
+lang    tokens |   tok/word  tok/grapheme   tok/byte  tok/sentence
+------------------------------------------------------------------
+eng        284 |      1.127         0.205      0.205         9.467
+hin        815 |      2.921         0.938      0.243        27.167
+kan       1050 |      5.497         1.125      0.265        35.000
+tam       1232 |      6.417         1.179      0.270        41.067
+
+==============================================================================
+RATIO TO ENGLISH (=1.00), per denominator -- this is what 'X times worse' means
+==============================================================================
+
+-- general --
+lang    tok/word  tok/grapheme   tok/byte  tok/sentence
+eng         1.00          1.00       1.00          1.00
+hin         2.59          4.57       1.18          2.87
+kan        18.43         20.73       4.87         13.97
+tam        21.06         21.25       4.87         16.05
+
+-- indic_aware --
+lang    tok/word  tok/grapheme   tok/byte  tok/sentence
+eng         1.00          1.00       1.00          1.00
+hin         2.59          4.57       1.18          2.87
+kan         4.88          5.48       1.29          3.70
+tam         5.69          5.75       1.32          4.34
+
+==============================================================================
+DOES THE ORDERING FLIP DEPENDING ON WHICH DENOMINATOR YOU PICK?
+==============================================================================
+
+-- general --
+  tok/word       worst-to-best: tam > kan > hin > eng
+  tok/grapheme   worst-to-best: tam > kan > hin > eng
+  tok/byte       worst-to-best: kan > tam > hin > eng
+  tok/sentence   worst-to-best: tam > kan > hin > eng
+
+-- indic_aware --
+  tok/word       worst-to-best: tam > kan > hin > eng
+  tok/grapheme   worst-to-best: tam > kan > hin > eng
+  tok/byte       worst-to-best: tam > kan > hin > eng
+  tok/sentence   worst-to-best: tam > kan > hin > eng

@@ -1,0 +1,73 @@
+Loaded 10 eng lines, 10 hin lines from GIVEN corpus_sample/
+
+======================================================================
+EXPERIMENT 1 -- lower() applied before tokenizing (fertility.py line 60)
+======================================================================
+lang  tok            baseline (lower=True)   fixed (lower=False)    % change
+eng   general                       2.2354                2.3551       5.35%
+eng   indic_aware                   2.2354                2.3551       5.35%
+hin   general                       3.3168                3.3168       0.00%
+hin   indic_aware                   3.2468                3.2468       0.00%
+
+======================================================================
+EXPERIMENT 2 -- split(" ") literal-space split (fertility.py line 62)
+======================================================================
+  [eng line 7] split(" ") -> 8 words (incl. 1 empty string(s)) | split() -> 7 words
+    raw: 'Please keep the books  in the cupboard.'
+  [hin line 10] split(" ") -> 6 words (incl. 1 empty string(s)) | split() -> 5 words
+    raw: 'किताबें  अलमारी में रखी हैं।'
+
+lang  tok            baseline split(" ")   fixed split()    % change
+eng   general                     2.2354          2.2729       1.68%
+eng   indic_aware                 2.2354          2.2729       1.68%
+hin   general                     3.3168          3.3835       2.01%
+hin   indic_aware                 3.2468          3.3101       1.95%
+
+======================================================================
+EXPERIMENT 3 -- mean of per-line ratios vs ratio of totals (fertility.py line 67)
+======================================================================
+lang  tok            mean_of_ratios (orig)   ratio_of_sums    % change
+eng   general                       2.2354          2.2532       0.79%
+eng   indic_aware                   2.2354          2.2532       0.79%
+hin   general                       3.3168          3.2419      -2.26%
+hin   indic_aware                   3.2468          3.1774      -2.14%
+
+======================================================================
+EXPERIMENT 4 -- all fixes combined vs original script behavior
+======================================================================
+lang  tok            original (all 3 bugs)     all fixed    % change
+eng   general                       2.2354        2.4103       7.82%
+eng   indic_aware                   2.2354        2.4103       7.82%
+hin   general                       3.3168        3.2951      -0.65%
+hin   indic_aware                   3.2468        3.2295      -0.53%
+
+======================================================================
+EXPERIMENT 5 -- random.seed(1337) red herring
+======================================================================
+All lines in fertility.py mentioning 'random':
+    import random
+    random.seed(1337)  # reproducibility
+
+Static check: random is imported and seeded, but NEVER called again anywhere in the file
+
+Empirical check: does shuffling line order change the reported fertility?
+  eng: original-order=2.235444  shuffled=2.235444  reversed=2.235444  (all identical: True)
+  hin: original-order=3.246786  shuffled=3.246786  reversed=3.246786  (all identical: True)
+
+======================================================================
+EXPERIMENT 6 -- tok/char: Unicode codepoints (original) vs extended grapheme clusters
+======================================================================
+lang  line#   codepoints (orig)   grapheme clusters    diff
+hin   1                      30                  22       8
+hin   2                      38                  24      14
+hin   3                      30                  21       9
+hin   4                      32                  21      11
+hin   5                      24                  14      10
+hin   6                      24                  17       7
+hin   7                      36                  21      15
+hin   8                      22                  13       9
+hin   9                      26                  18       8
+hin   10                     28                  17      11
+
+Totals -- eng: 448 codepoints vs 448 grapheme clusters (no difference -- pure ASCII has no combining marks)
+Totals -- hin: 290 codepoints vs 188 grapheme clusters (-35.17% fewer grapheme clusters than codepoints)
