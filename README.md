@@ -25,7 +25,7 @@ This repository contains an evidence-based audit of a multilingual AI/ML tokeniz
 ## Repository Structure
 
 ```text
-your-submission/
+ai-ml-system-audit/
 ├── NOTEBOOK.md
 ├── AI_USAGE.md
 ├── partA/
