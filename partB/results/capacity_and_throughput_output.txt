@@ -1,0 +1,89 @@
+======================================================================
+B1 -- KV-cache bytes/token and max concurrent 4096-token sequences
+======================================================================
+KV bytes/token = 2(K,V) x 28 layers x 8 kv_heads x 128 head_dim x 2 bytes(fp16)
+              = 114688 bytes/token (112.0 KiB/token)
+
+Weight bytes = 4.20e+09 params x 2 bytes = 8.4000e+09 bytes
+
+-- interpreting '24 GB' as decimal GB, 10^9 bytes (1000000000 bytes/GB) --
+   total mem        = 2.4000e+10 bytes
+   usable (x0.92) = 2.2080e+10 bytes
+   - weights        = 8.4000e+09 bytes
+   - non-KV overhead= 1.6000e+09 bytes
+   = available for KV cache = 1.2080e+10 bytes
+   max tokens       = 105,329
+   max concurrent 4096-token sequences = 105329 / 4096 = 25.72 -> floor = 25
+
+-- interpreting '24 GB' as GiB, 2^30 bytes (1073741824 bytes/GB) --
+   total mem        = 2.5770e+10 bytes
+   usable (x0.92) = 2.3708e+10 bytes
+   - weights        = 8.4000e+09 bytes
+   - non-KV overhead= 1.7180e+09 bytes
+   = available for KV cache = 1.3590e+10 bytes
+   max tokens       = 118,497
+   max concurrent 4096-token sequences = 118497 / 4096 = 28.93 -> floor = 28
+
+======================================================================
+Cross-check against bench_log.csv: preempted_seqs and kv_cache_util
+======================================================================
+ batch  kv_cache_util  preempted_seqs    implied true cap (batch-preempted)
+     4           0.16               0                                      
+     8           0.31               0                                      
+    16           0.62               0                                      
+    24           0.93               0                                      
+    32           0.97               7                                    25
+    48           0.97              23                                    25
+
+B1 prediction (decimal GB interpretation): 25 concurrent full-context sequences
+B1 prediction (GiB interpretation):         28 concurrent full-context sequences
+Empirical (batch=32, 7 preempted): 32-7 = 25
+Empirical (batch=48, 23 preempted): 48-23 = 25
+=> decimal-GB interpretation matches the empirical onset exactly; GiB does not.
+
+======================================================================
+B2/B3 -- reverse-engineering reported_tok_s, and honest goodput
+======================================================================
+
+ batch  prompt   gen   wall_s  reported  formula_check
+     1     512   256    10.94      70.2           70.2
+     2     512   256    11.61     132.3          132.3
+     4     512   256    11.77     261.0          261.0
+     8     512   256    12.40     495.4          495.5
+    16     512   256    13.91     883.2          883.4
+    32     512   256    16.50    1489.6         1489.5
+    64     512   256    21.68    2267.3         2267.2
+     4    3584   512    28.98     565.4          565.4
+     8    3584   512    36.30     902.6          902.7
+    16    3584   512    49.97    1311.4         1311.5
+    24    3584   512    61.16    1607.4         1607.3
+    32    3584   512    94.71    1384.0         1383.9
+    48    3584   512   151.41    1298.5         1298.5
+
+formula: reported_tok_s = batch_size * (prompt_len + gen_len) / wall_clock_s
+(blends one-time prefill tokens with sustained decode tokens over the FULL wall clock)
+
+-- long-prompt (3584) sweep: reported_tok_s trend by batch --
+  batch=  4  reported_tok_s=   565.4  preempted=  0  kv_cache_util=0.16
+  batch=  8  reported_tok_s=   902.6  preempted=  0  kv_cache_util=0.31
+  batch= 16  reported_tok_s=  1311.4  preempted=  0  kv_cache_util=0.62
+  batch= 24  reported_tok_s=  1607.4  preempted=  0  kv_cache_util=0.93
+  batch= 32  reported_tok_s=  1384.0  preempted=  7  kv_cache_util=0.97
+  batch= 48  reported_tok_s=  1298.5  preempted= 23  kv_cache_util=0.97
+
+-- honest goodput of the batch=24, prompt=3584 row --
+   row: {'batch_size': 24, 'prompt_len': 3584.0, 'gen_len': 512.0, 'num_requests': 24, 'wall_clock_s': 61.16, 'reported_tok_s': 1607.4, 'ttft_ms_p50': 500.5, 'itl_ms_p50': 96.07, 'e2e_ms_p95': 69221.3, 'preempted_seqs': 0, 'kv_cache_util': 0.93}
+
+   Method 1 (itl_ms_p50): goodput = batch_size / (itl_ms_p50/1000)
+     = 24 / (96.07/1000) = 249.8 tok/s
+
+   Method 2 (wall_clock - ttft): decode_time = 61.16 - 500.5/1000 = 60.6595s
+     generated tokens = 24 x 512 = 12288
+     goodput = 12288 / 60.6595 = 202.6 tok/s
+
+   Both independently land in the same ballpark: 250 and 203 tok/s
+   vs. reported_tok_s for this row: 1607.4 tok/s (6.4x - 7.9x inflated)
+
+-- what REPORT_v0 claimed for batch=48 vs what the log already shows --
+   REPORT_v0 claim: ~3200 tok/s (naive 2x of the 'best observed' 1607.4 at batch=24)
+   Actual logged batch=48 row: reported_tok_s=1298.5, preempted_seqs=23, kv_cache_util=0.97
